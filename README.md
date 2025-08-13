@@ -14,6 +14,10 @@ Most of these projects are based on online tutorials and courses. The main goal 
 - [Project 1: Real-World Software Development: A Project-Driven Guide to Fundamentals in Java] 
   Based on: [[Original Tutorial Link]](https://www.amazon.com/Real-World-Software-Development-Project-Driven-Fundamentals-ebook/dp/B0828B1HGH/ref=sr_1_11?crid=2L1ZG9NWSE4DF&dib=eyJ2IjoiMSJ9.jknA4IkYars_3l0IeYXXHaevqTkSn90scyl0eBUHSiiTJ1ECYZ-eOVzMHGXkI9Ui3Q2mWjsnjX1_lgPEyw3neaSf7Ommd9t7499hhxXKn_muzQrGBDmpk4ioJurdL4hA_uAh2MJ8y84zvd_Sh--1hTXaYp5JGCSSr4xZAKaNQSH83O_ZAtJA_LbY92u3qMdItKwychixL5M62kGBpdBuefnUtbYoCU5bckAaHPVh1kY.j17XyajH19boJhg_DaWRyezO3xhvmxPWiGNxvt6pLiI&dib_tag=se&keywords=software+development+java&qid=1755022452&s=books&sprefix=software+development+java%2Cstripbooks%2C87&sr=1-11)
 
+- [Project 2: Creating Your First Blockchain with Java] 
+  Based on: [[Original Tutorial Link]](https://medium.com/programmers-blockchain/create-simple-blockchain-java-tutorial-from-scratch-6eeed3cb03fa)
+  
+
 ## How to Use
 
 1. Browse individual project folders.
