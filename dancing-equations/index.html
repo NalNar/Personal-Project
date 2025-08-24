@@ -1,7 +1,4 @@
-# Create a single-file "Graph Dancer v3" with inline CSS/JS and a visible version badge.
-from pathlib import Path
-
-v3 = r"""<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -190,7 +187,3 @@ v3 = r"""<!doctype html>
   </script>
 </body>
 </html>
-"""
-p = Path("/mnt/data/index_graph_dancer_v3.html")
-p.write_text(v3, encoding="utf-8")
-str(p)
