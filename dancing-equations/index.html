@@ -1,23 +1,314 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Dancing Equations</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<meta charset="utf-8" />
+<title>Dancing Equations — Intergalactic (Canvas)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<!-- MathJax: SVG output so we can draw equations as images onto canvas -->
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<style>
+  :root{ --bg1:#060717; --bg2:#0b0f2a; --muted:#a8b3d6; --ink:#e8edff; --hue:260; }
+  *{box-sizing:border-box} html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+  .wrap{display:grid;grid-template-columns:360px 1fr;gap:14px;height:100%;padding:14px}
+  @media (max-width: 980px){.wrap{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+  .panel{background:rgba(13,18,46,.86);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:12px;backdrop-filter:blur(6px);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  h1{margin:0 0 8px 0;font-size:18px} .sub{color:var(--muted);font-size:12px;margin-bottom:10px}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+  input,textarea,select,button{width:100%;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;background:#0e1430;color:var(--ink);outline:none}
+  input:focus,textarea:focus,select:focus{border-color:#3a63ff;box-shadow:0 0 0 4px rgba(58,99,255,.25)}
+  textarea{min-height:100px;resize:vertical} .row{display:flex;gap:8px} .row>*{flex:1}
+  button{cursor:pointer;background:#1f2a56} .primary{background:#3a63ff} .ghost{background:#111634} .pill{border-radius:999px}
+  .muted{color:var(--muted);font-size:12px} .bad{color:#ffd1d1}
+  .stage{position:relative;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+  canvas{position:absolute;inset:0}
+  .nebula{position:absolute;inset:-20%;filter:blur(60px);pointer-events:none;background:
+    radial-gradient(closest-side,hsla(var(--hue),100%,65%,.18),transparent 70%)}
+  .grid{position:absolute;inset:0;pointer-events:none;opacity:.35;background:
+    radial-gradient(circle at 50% 110%, rgba(77,105,255,.08), transparent 35%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.05), rgba(255,255,255,.05) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.05) 1px, transparent 1px, transparent 40px);}
+  .dock{position:absolute;left:12px;bottom:12px;width:360px;max-width:calc(100% - 24px);background:rgba(8,12,28,.8);
+        border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px}
+  .note{position:absolute;right:12px;bottom:12px;font-size:12px;color:var(--muted)}
+</style>
 </head>
 <body>
-  <div id="controls">
-    <input id="video-url" placeholder="Enter YouTube URL or ID" />
-    <button id="load-video">Play</button>
+<div class="wrap">
+  <!-- controls -->
+  <div class="panel">
+    <h1>🪐 Dancing Equations (Canvas)</h1>
+    <div class="sub">Paste a YouTube link, set BPM (tap), and your equations will dance as graphics.</div>
+
+    <label>YouTube URL</label>
+    <div class="row">
+      <input id="ytUrl" placeholder="https://www.youtube.com/watch?v=..." />
+      <button id="loadBtn" class="primary">Load</button>
+    </div>
+    <div id="warn" class="muted bad" style="display:none"></div>
+
+    <label>Equations (LaTeX, one per line)</label>
+    <textarea id="eqInput" placeholder="e^{i\\pi}+1=0
+\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx=\\sqrt{\\pi}
+\\sum_{n=1}^{\\infty} \\frac{1}{n^2}=\\frac{\\pi^2}{6}
+\\frac{d}{dx}\\sin x=\\cos x"></textarea>
+    <div class="row">
+      <button id="applyEq" class="primary">Apply</button>
+      <button id="defaults" class="ghost">Load Famous Set</button>
+    </div>
+
+    <label>Visual count</label>
+    <input id="count" type="range" min="3" max="24" value="10" />
+    <div class="muted"><span id="countVal">10</span> sprites</div>
+
+    <label>Song BPM (tap to detect)</label>
+    <div class="row">
+      <input id="bpm" type="number" min="30" max="240" value="120"/>
+      <button id="tap" class="pill">Tap</button>
+      <button id="half" class="pill">÷2</button>
+      <button id="double" class="pill">×2</button>
+    </div>
+    <div class="row">
+      <div>
+        <label>Beat offset (ms)</label>
+        <input id="offset" type="number" value="0"/>
+      </div>
+      <div>
+        <label>Subdivision</label>
+        <select id="subdiv">
+          <option value="1" selected>Quarter</option>
+          <option value="2">Eighth</option>
+          <option value="4">Sixteenth</option>
+          <option value="3">Triplet</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button id="playPause">▶️ Play</button>
+      <button id="newHue">🎨 New Cosmic Hue</button>
+    </div>
+
+    <div class="muted" style="margin-top:8px">
+      Tip: browsers don’t expose raw audio from YouTube, so the pulse follows your BPM (tap helps).
+    </div>
   </div>
-  <div id="player"></div>
-  <div id="equations">
-    <div class="equation">\\[ e^{i\pi} + 1 = 0 \\]</div>
-    <div class="equation">\\[ E = mc^2 \\]</div>
-    <div class="equation">\\[ \int_a^b f(x)\,dx = F(b) - F(a) \\]</div>
+
+  <!-- stage -->
+  <div class="stage" id="stage">
+    <canvas id="stars"></canvas>
+    <canvas id="main"></canvas>
+    <div class="nebula" id="nebula"></div>
+    <div class="grid"></div>
+
+    <div class="dock">
+      <div class="row">
+        <div id="player" style="width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden"></div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button id="dockPlay" class="primary">Play/Pause</button>
+        <button id="dockMute" class="ghost">Mute</button>
+        <input id="dockSeek" type="range" min="0" max="100" value="0" />
+      </div>
+    </div>
+
+    <div class="note">Hue <b id="hueVal">260</b>° • BPM <b id="bpmVal">120</b></div>
   </div>
-  <script src="script.js"></script>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = s=>document.querySelector(s);
+const rand=(a,b)=>a+Math.random()*(b-a); const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ---------- YouTube ---------- */
+let ytPlayer=null, videoId=null;
+function parseVideoId(url){
+  try{const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+      if(u.searchParams.get('v')) return u.searchParams.get('v');
+      const m=url.match(/\/embed\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;}catch(e){return null;}
+}
+window.onYouTubeIframeAPIReady = () => {
+  ytPlayer = new YT.Player('player', {
+    videoId: 'dQw4w9WgXcQ',
+    playerVars:{playsinline:1,rel:0,modestbranding:1,controls:1},
+    events:{onStateChange: ev=>{ if(ev.data===YT.PlayerState.PLAYING){rescheduleBeats();} updateDock(); }}
+  });
+};
+$('#loadBtn').addEventListener('click', ()=>{
+  const id=parseVideoId($('#ytUrl').value.trim());
+  if(!id){ showWarn('Could not parse a YouTube video ID from that URL.'); return; }
+  hideWarn(); videoId=id; ytPlayer.loadVideoById(id); setTimeout(updateSeekLoop, 1200);
+});
+$('#dockPlay').addEventListener('click', ()=>{ const s=ytPlayer.getPlayerState(); (s===1?ytPlayer.pauseVideo():ytPlayer.playVideo()); updateDock(); });
+$('#dockMute').addEventListener('click', ()=> ytPlayer.isMuted()?ytPlayer.unMute():ytPlayer.mute());
+$('#dockSeek').addEventListener('input', ()=>{ const d=ytPlayer.getDuration?.()||0; ytPlayer.seekTo(d*($('#dockSeek').value/100), true); });
+function updateDock(){ if(!ytPlayer) return; const s=ytPlayer.getPlayerState(); $('#playPause').textContent = (s===1?'⏸️ Pause':'▶️ Play'); $('#dockPlay').textContent=(s===1?'Pause':'Play'); $('#dockMute').textContent=ytPlayer.isMuted()?'Unmute':'Mute'; }
+function updateSeekLoop(){ const d=ytPlayer.getDuration?.()||0; if(d>0){ setInterval(()=>{ const t=ytPlayer.getCurrentTime?.()||0; $('#dockSeek').value=(t/d)*100; }, 250);} }
+$('#playPause').addEventListener('click', ()=>$('#dockPlay').click());
+function showWarn(msg){ const w=$('#warn'); w.textContent=msg; w.style.display='block'; }
+function hideWarn(){ $('#warn').style.display='none'; }
+
+/* ---------- BPM / beat engine ---------- */
+let bpm=120, beatInt=0.5, beatTimer=null, taps=[];
+const bpmInput=$('#bpm'); const bpmVal=$('#bpmVal'); const offsetInput=$('#offset'); const subdiv=$('#subdiv');
+bpmInput.addEventListener('input', ()=>{ bpm=clamp(parseFloat(bpmInput.value)||120,30,240); bpmVal.textContent=bpm; rescheduleBeats();});
+$('#half').addEventListener('click', ()=>{ bpm=clamp((parseFloat(bpmInput.value)||120)/2,30,240); bpmInput.value=bpm; bpmVal.textContent=bpm; rescheduleBeats();});
+$('#double').addEventListener('click', ()=>{ bpm=clamp((parseFloat(bpmInput.value)||120)*2,30,240); bpmInput.value=bpm; bpmVal.textContent=bpm; rescheduleBeats();});
+$('#tap').addEventListener('click', ()=>{ const now=performance.now(); taps.push(now); if(taps.length>6) taps.shift();
+  if(taps.length>=2){ const ints=[]; for(let i=1;i<taps.length;i++) ints.push(taps[i]-taps[i-1]); ints.sort((a,b)=>a-b);
+    const slice=ints.slice(1, ints.length-1); const avg=(slice.length?slice:ints).reduce((a,b)=>a+b,0)/((slice.length?slice:ints).length);
+    bpm=Math.round(clamp(60000/avg,30,240)); bpmInput.value=bpm; bpmVal.textContent=bpm; rescheduleBeats(); }
+});
+subdiv.addEventListener('change', rescheduleBeats); offsetInput.addEventListener('input', rescheduleBeats);
+function rescheduleBeats(){ if(beatTimer){clearTimeout(beatTimer); beatTimer=null;} scheduleBeats(); }
+function scheduleBeats(){
+  const sub=parseInt(subdiv.value,10)||1; beatInt=(60/bpm)/sub;
+  const playing = ytPlayer && ytPlayer.getPlayerState?.()===1;
+  if(!playing){ /* still pulse slowly so it feels alive */ kick(0.25); setTimeout(scheduleBeats, 900); return; }
+  const t = ytPlayer.getCurrentTime?.()||0; const off=(parseInt(offsetInput.value,10)||0)/1000;
+  const phase=(t+off)%beatInt; const wait=(beatInt-phase); beatTimer=setTimeout(beatLoop, wait*1000);
+}
+function beatLoop(){
+  kick(1);
+  beatTimer=setTimeout(beatLoop, beatInt*1000);
+}
+
+/* ---------- math → image (via MathJax SVG) ---------- */
+const famous = [
+  String.raw`e^{i\pi}+1=0`,
+  String.raw`\int_{-\infty}^{\infty} e^{-x^2}\,dx=\sqrt{\pi}`,
+  String.raw`\sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6}`,
+  String.raw`\nabla\cdot\vec{E}=\rho/\varepsilon_0`,
+  String.raw`a^2+b^2=c^2`,
+  String.raw`E=mc^2`,
+  String.raw`\int_a^b f'(x)\,dx=f(b)-f(a)`,
+  String.raw`\lim_{x\to 0}\frac{\sin x}{x}=1`,
+  String.raw`\Pr(A|B)=\frac{\Pr(A\cap B)}{\Pr(B)}`
+];
+$('#defaults').addEventListener('click', ()=>{ $('#eqInput').value=famous.join("\n"); buildSprites(); });
+$('#applyEq').addEventListener('click', buildSprites);
+$('#count').addEventListener('input', ()=>{ $('#countVal').textContent=$('#count').value; buildSprites(); });
+
+async function texToImage(tex, color='#e8edff'){
+  await MathJax.startup.promise; // ensure ready
+  const node = MathJax.tex2svg(tex, {display:true}); // returns mjx-container
+  const svg = node.querySelector('svg');
+  svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  svg.setAttribute('fill', color);
+  const str = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([str], {type:'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = ()=> URL.revokeObjectURL(url);
+  img.src = url;
+  await img.decode?.().catch(()=>{});
+  return img;
+}
+
+/* ---------- canvas scene ---------- */
+const starC = $('#stars'), mainC = $('#main');
+const starCtx = starC.getContext('2d'), ctx = mainC.getContext('2d');
+let sprites=[], stars=[];
+function resize(){
+  const dpr=Math.max(1, window.devicePixelRatio||1);
+  [starC, mainC].forEach(c=>{ c.width=c.clientWidth*dpr; c.height=c.clientHeight*dpr; const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); });
+  makeStars();
+}
+window.addEventListener('resize', resize); resize();
+
+function makeStars(){
+  const w=starC.clientWidth,h=starC.clientHeight, n=Math.floor((w*h)/7000);
+  stars=Array.from({length:n},()=>({x:Math.random()*w,y:Math.random()*h,z:Math.random()*1+.2,r:Math.random()*1.6+.2,tw:Math.random()*Math.PI*2}));
+}
+function drawStars(){
+  const w=starC.clientWidth,h=starC.clientHeight; starCtx.clearRect(0,0,w,h);
+  const hue=getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
+  for(const s of stars){
+    s.tw+=0.03; const a=(Math.sin(s.tw)+1)/2*.85+.05;
+    starCtx.fillStyle=`hsla(${hue},100%,80%,${a*0.7})`; starCtx.beginPath(); starCtx.arc(s.x,s.y,s.r*s.z,0,Math.PI*2); starCtx.fill();
+    s.x -= 0.02*s.z; if(s.x<-2) s.x=w+2; s.y += 0.01*s.z; if(s.y>h+2) s.y=-2;
+  }
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+/* sprite = {img,w,h,r,angle,spd,bob,rot,scale,kick} */
+async function buildSprites(){
+  const lines = ($('#eqInput').value||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length) lines.push(...famous);
+  const count = parseInt($('#count').value,10);
+  const need = Math.max(count, 3);
+  sprites = [];
+  const hue=getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
+  const color=`hsl(${hue},100%,88%)`;
+
+  // preload images
+  const imgs = await Promise.all(lines.map(tex=>texToImage(tex, color)).slice(0, need));
+  const W=mainC.clientWidth,H=mainC.clientHeight, cx=W/2, cy=H/2;
+  for(let i=0;i<need;i++){
+    const img = imgs[i % imgs.length];
+    const scale = rand(.6, 1.1);
+    sprites.push({
+      img, w: img.width*0.6, h: img.height*0.6,
+      r: rand(Math.min(W,H)*0.18, Math.min(W,H)*0.42),
+      angle: rand(0, Math.PI*2),
+      spd: rand(-0.7,0.7)*(Math.random()<.5?1:-1),
+      bob: rand(0.6,1.6),
+      rot: rand(-0.2,0.2),
+      scale, kick: 0
+    });
+  }
+}
+buildSprites();
+
+let lastT=performance.now();
+function draw(){
+  const now=performance.now(), dt=Math.min(0.05, (now-lastT)/1000); lastT=now;
+  const W=mainC.clientWidth,H=mainC.clientHeight, cx=W/2, cy=H/2;
+  ctx.clearRect(0,0,W,H);
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+
+  for(const s of sprites){
+    s.angle += s.spd * dt * 0.4;
+    const x = cx + Math.cos(s.angle)*s.r;
+    const y = cy + Math.sin(s.angle)*s.r*0.7 + Math.sin(now*0.001*s.bob)*6;
+
+    // decay kick
+    s.kick *= Math.pow(0.001, dt); // fast decay
+    const k = 1 + 0.25*s.kick;
+
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(s.rot + Math.sin(now*0.0007 + s.r*0.001)*0.08);
+    ctx.scale(k*s.scale, k*s.scale);
+    // soft glow
+    ctx.shadowColor = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--hue').trim()},100%,70%,.65)`;
+    ctx.shadowBlur = 18;
+    ctx.drawImage(s.img, -s.w/2, -s.h/2, s.w, s.h);
+    ctx.restore();
+  }
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* kick effect on beat */
+function kick(str=1){
+  for(const s of sprites){ s.kick = Math.min(1, s.kick + str); }
+  // background hue pulse
+  const hue = Math.floor(rand(0,360)); document.documentElement.style.setProperty('--hue', hue); $('#hueVal').textContent=hue;
+  const neb = $('#nebula'); neb.style.opacity='1'; neb.animate([{opacity:.2},{opacity:.9},{opacity:.2}], {duration:420, easing:'ease-in-out'});
+}
+$('#newHue').addEventListener('click', ()=> kick(0.6));
+
+/* resync beats when playing */
+setInterval(()=>{ if(ytPlayer && ytPlayer.getPlayerState?.()===1 && !beatTimer) scheduleBeats(); }, 800);
+
+/* initial UI values */
+$('#bpmVal').textContent = $('#bpm').value;
+$('#countVal').textContent = $('#count').value;
+</script>
 </body>
 </html>
