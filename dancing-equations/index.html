@@ -2,357 +2,193 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Dancing Equations — Audio-Reactive</title>
+<title>Dancing Equations — Audio Reactive (Minimal Canvas)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<!-- MathJax SVG output so we can rasterize onto canvas -->
+<!-- MathJax (SVG output) -->
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<!-- YouTube IFrame API -->
+<!-- YouTube IFrame API (optional player) -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
-  :root{ --bg1:#060717; --bg2:#0b0f2a; --muted:#a8b3d6; --ink:#e8edff; --hue:260; }
-  *{box-sizing:border-box} html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
-  .wrap{display:grid;grid-template-columns:360px 1fr;gap:14px;height:100%;padding:14px}
-  @media (max-width: 980px){.wrap{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
-  .panel{background:rgba(13,18,46,.86);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:12px;backdrop-filter:blur(6px);box-shadow:0 12px 40px rgba(0,0,0,.35)}
-  h1{margin:0 0 8px 0;font-size:18px} .sub{color:var(--muted);font-size:12px;margin-bottom:10px}
-  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
-  input,textarea,select,button{width:100%;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;background:#0e1430;color:var(--ink);outline:none}
-  input:focus,textarea:focus,select:focus{border-color:#3a63ff;box-shadow:0 0 0 4px rgba(58,99,255,.25)}
-  textarea{min-height:100px;resize:vertical} .row{display:flex;gap:8px} .row>*{flex:1}
-  button{cursor:pointer;background:#1f2a56} .primary{background:#3a63ff} .ghost{background:#111634} .pill{border-radius:999px}
-  .muted{color:var(--muted);font-size:12px} .bad{color:#ffd1d1}
-  .stage{position:relative;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
-  canvas{position:absolute;inset:0}
-  .nebula{position:absolute;inset:-20%;filter:blur(60px);pointer-events:none;background:
-    radial-gradient(closest-side,hsla(var(--hue),100%,65%,.18),transparent 70%)}
-  .grid{position:absolute;inset:0;pointer-events:none;opacity:.35;background:
-    radial-gradient(circle at 50% 110%, rgba(77,105,255,.08), transparent 35%),
-    repeating-linear-gradient(0deg, rgba(255,255,255,.05), rgba(255,255,255,.05) 1px, transparent 1px, transparent 40px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.05) 1px, transparent 1px, transparent 40px);}
-  .dock{position:absolute;left:12px;bottom:12px;width:360px;max-width:calc(100% - 24px);background:rgba(8,12,28,.8);
-        border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px}
-  .note{position:absolute;right:12px;bottom:12px;font-size:12px;color:var(--muted)}
+  html,body{height:100%;margin:0;background:#0a0f24;color:#e8edff;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+  .ui{position:fixed;left:12px;top:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;z-index:3}
+  .ui input,.ui button{border:1px solid #314177;background:#0f1636;color:#e8edff;border-radius:10px;padding:9px 12px}
+  .ui input{flex:1}
+  .ui .btn{cursor:pointer}
+  #msg{position:fixed;left:12px;bottom:12px;color:#a8b3d6;font-size:12px}
+  canvas{position:fixed;inset:0}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- controls -->
-  <div class="panel">
-    <h1>🪐 Dancing Equations (Audio-Reactive)</h1>
-    <div class="sub">Play a YouTube song below, then click <b>Start Tab Audio</b> to make equations dance to the beat.</div>
-
-    <label>YouTube URL</label>
-    <div class="row">
-      <input id="ytUrl" placeholder="https://www.youtube.com/watch?v=..." />
-      <button id="loadBtn" class="primary">Load</button>
-    </div>
-    <div id="warn" class="muted bad" style="display:none"></div>
-
-    <label>Equations (LaTeX, one per line)</label>
-    <textarea id="eqInput" placeholder="e^{i\\pi}+1=0
-\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx=\\sqrt{\\pi}
-\\sum_{n=1}^{\\infty} \\frac{1}{n^2}=\\frac{\\pi^2}{6}
-\\frac{d}{dx}\\sin x=\\cos x"></textarea>
-    <div class="row">
-      <button id="applyEq" class="primary">Apply</button>
-      <button id="defaults" class="ghost">Load Famous Set</button>
-    </div>
-
-    <label>Visual count</label>
-    <input id="count" type="range" min="3" max="24" value="12" />
-    <div class="muted"><span id="countVal">12</span> sprites</div>
-
-    <hr style="border-color:rgba(255,255,255,.08); margin:12px 0">
-
-    <label>Beat Source</label>
-    <div class="row">
-      <button id="startTab" class="primary">Start Tab Audio</button>
-      <button id="startMic" class="ghost">Use Microphone</button>
-    </div>
-    <div class="row" style="margin-top:6px">
-      <label>Sensitivity</label>
-      <input id="sens" type="range" min="0.5" max="3.0" step="0.05" value="1.6" />
-    </div>
-    <div class="muted">Tip: On Chrome, choose <b>“Chrome Tab → This tab”</b> and ensure <b>“Share tab audio”</b> is on.</div>
-
-    <div class="row" style="margin-top:10px">
-      <button id="newHue">🎨 New Cosmic Hue</button>
-    </div>
+  <div class="ui">
+    <input id="yt" placeholder="YouTube URL (optional) — load & then Start Tab Audio"/>
+    <button id="load" class="btn">Load</button>
+    <button id="tab"  class="btn">Start Tab Audio</button>
+    <button id="mic"  class="btn">Use Microphone</button>
+    <button id="hue"  class="btn">New Hue</button>
   </div>
-
-  <!-- stage -->
-  <div class="stage" id="stage">
-    <canvas id="stars"></canvas>
-    <canvas id="main"></canvas>
-    <div class="nebula" id="nebula"></div>
-    <div class="grid"></div>
-
-    <div class="dock">
-      <div class="row">
-        <div id="player" style="width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden"></div>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <button id="dockPlay" class="primary">Play/Pause</button>
-        <button id="dockMute" class="ghost">Mute</button>
-        <input id="dockSeek" type="range" min="0" max="100" value="0" />
-      </div>
-    </div>
-
-    <div class="note">Hue <b id="hueVal">260</b>° • Beats detected: <b id="beatCount">0</b></div>
-  </div>
-</div>
+  <div id="msg">Tip: If you only see plain “e^{iπ}+1=0”, you’re on the wrong file. This version draws on <b>canvas</b> and always animates.</div>
+  <div id="player" style="position:fixed;right:12px;bottom:12px;width:340px;max-width:45vw;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;z-index:2"></div>
+  <canvas id="bg"></canvas>
+  <canvas id="main"></canvas>
 
 <script>
 /* ===== helpers ===== */
 const $ = s=>document.querySelector(s);
 const rand=(a,b)=>a+Math.random()*(b-a);
 
-/* ===== YouTube player ===== */
-let ytPlayer=null, videoId=null;
+/* ===== YouTube (optional) ===== */
+let ytPlayer=null;
 function parseVideoId(url){
-  try{const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
-      if(u.searchParams.get('v')) return u.searchParams.get('v');
-      const m=url.match(/\/embed\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;}catch(e){return null;}
+  try{const u=new URL(url);
+    if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+    if(u.searchParams.get('v')) return u.searchParams.get('v');
+    const m=url.match(/\/embed\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;
+  }catch{ return null; }
 }
 window.onYouTubeIframeAPIReady = () => {
-  ytPlayer = new YT.Player('player', {
-    videoId:'dQw4w9WgXcQ',
-    playerVars:{playsinline:1,rel:0,modestbranding:1,controls:1},
-    events:{ onStateChange: ()=>updateDock() }
-  });
+  ytPlayer = new YT.Player('player', { videoId:'dQw4w9WgXcQ', playerVars:{playsinline:1,rel:0,modestbranding:1,controls:1} });
 };
-$('#loadBtn').addEventListener('click', ()=>{
-  const id=parseVideoId($('#ytUrl').value.trim());
-  if(!id){ showWarn('Could not parse a YouTube video ID from that URL.'); return; }
-  hideWarn(); videoId=id; ytPlayer.loadVideoById(id); setTimeout(updateSeekLoop, 1200);
-});
-$('#dockPlay').addEventListener('click', ()=>{ const s=ytPlayer.getPlayerState(); (s===1?ytPlayer.pauseVideo():ytPlayer.playVideo()); updateDock(); });
-$('#dockMute').addEventListener('click', ()=> ytPlayer.isMuted()?ytPlayer.unMute():ytPlayer.mute());
-$('#dockSeek').addEventListener('input', ()=>{ const d=ytPlayer.getDuration?.()||0; ytPlayer.seekTo(d*($('#dockSeek').value/100), true); });
-function updateDock(){ if(!ytPlayer) return; const s=ytPlayer.getPlayerState(); $('#dockPlay').textContent=(s===1?'Pause':'Play'); $('#dockMute').textContent=ytPlayer.isMuted()?'Unmute':'Mute'; }
-function updateSeekLoop(){ const d=ytPlayer.getDuration?.()||0; if(d>0){ setInterval(()=>{ const t=ytPlayer.getCurrentTime?.()||0; $('#dockSeek').value=(t/d)*100; }, 250);} }
-function showWarn(msg){ const w=$('#warn'); w.textContent=msg; w.style.display='block'; }
-function hideWarn(){ $('#warn').style.display='none'; }
+$('#load').onclick = ()=>{
+  const id = parseVideoId($('#yt').value.trim());
+  if(id) ytPlayer?.loadVideoById(id);
+};
 
-/* ===== Audio capture & beat detection ===== */
-let audioCtx, analyser, srcNode, procId=null;
-let prevMag = null, fluxHist = [], lastOnset = 0, beatCount = 0;
-
-async function startWithTabAudio(){
+/* ===== Audio capture + beat detection ===== */
+let audioCtx, analyser, srcNode, rafId=null, prevMag=null, fluxHist=[], lastOnset=0;
+function stopAudio(){
+  if(rafId) cancelAnimationFrame(rafId), rafId=null;
+  if(srcNode?.mediaStream) srcNode.mediaStream.getTracks().forEach(t=>t.stop());
+  if(audioCtx) audioCtx.close();
+  audioCtx=analyser=srcNode=null; prevMag=null; fluxHist=[]; lastOnset=0;
+}
+async function startWithTab(){
   stopAudio();
-  // Some browsers require video:true to capture audio
-  const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: { frameRate: 1 }, // minimal video track
-    audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
-  });
+  const stream = await navigator.mediaDevices.getDisplayMedia({ video:{frameRate:1}, audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
   initAudio(stream);
 }
 async function startWithMic(){
   stopAudio();
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
-  });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
   initAudio(stream);
-}
-function stopAudio(){
-  if (procId) cancelAnimationFrame(procId), procId=null;
-  if (srcNode && srcNode.mediaStream){ srcNode.mediaStream.getTracks().forEach(t=>t.stop()); }
-  if (audioCtx) { audioCtx.close(); }
-  srcNode = analyser = audioCtx = null;
-  prevMag = null; fluxHist = []; lastOnset = 0;
 }
 function initAudio(stream){
   audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  srcNode = audioCtx.createMediaStreamSource(stream);
+  srcNode  = audioCtx.createMediaStreamSource(stream);
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048;
-  analyser.smoothingTimeConstant = 0.5;
+  analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.5;
   srcNode.connect(analyser);
   processAudio();
 }
 function processAudio(){
-  if (!analyser) return;
   const N = analyser.frequencyBinCount;
-  const freq = new Float32Array(N);
-  analyser.getFloatFrequencyData(freq); // dB values (negative)
-  // convert to linear magnitudes
-  const mag = new Float32Array(N);
-  for (let i=0;i<N;i++){ mag[i] = Math.pow(10, freq[i]/20); }
-
-  // spectral flux (half-wave rectified)
-  if (!prevMag) prevMag = mag;
-  let flux = 0;
-  for (let i=0;i<N;i++){
-    const d = mag[i] - prevMag[i];
-    if (d > 0) flux += d;
-  }
-  prevMag = mag;
-
-  // adaptive threshold: mean + k*std over last ~0.8s
-  const windowSize = 43; // ~43 frames ≈ 0.7–0.8s depending on rAF timing
-  fluxHist.push(flux);
-  if (fluxHist.length > 120) fluxHist.shift(); // cap history
-  const k = parseFloat($('#sens').value); // sensitivity
-  const M = Math.min(windowSize, fluxHist.length);
-  let mean = 0, sq = 0;
-  for (let i=fluxHist.length-M;i<fluxHist.length;i++){ mean += fluxHist[i]; }
-  mean /= M;
-  for (let i=fluxHist.length-M;i<fluxHist.length;i++){ const v=fluxHist[i]-mean; sq += v*v; }
-  const std = Math.sqrt(sq / M);
-  const thresh = mean + k*std;
-
-  const now = performance.now();
-  if (flux > thresh && (now - lastOnset) > 120){ // refractory ~120ms
-    lastOnset = now; beat(); // trigger visual kick
-  }
-
-  procId = requestAnimationFrame(processAudio);
+  const f = new Float32Array(N); analyser.getFloatFrequencyData(f);
+  const mag = new Float32Array(N); for(let i=0;i<N;i++) mag[i] = Math.pow(10, f[i]/20);
+  if(!prevMag) prevMag = mag;
+  let flux=0; for(let i=0;i<N;i++){ const d=mag[i]-prevMag[i]; if(d>0) flux+=d; } prevMag=mag;
+  const W=45; fluxHist.push(flux); if(fluxHist.length>120) fluxHist.shift();
+  const M=Math.min(W,fluxHist.length);
+  let mean=0, sq=0; for(let i=fluxHist.length-M;i<fluxHist.length;i++) mean+=fluxHist[i]; mean/=M;
+  for(let i=fluxHist.length-M;i<fluxHist.length;i++){ const v=fluxHist[i]-mean; sq+=v*v; }
+  const std=Math.sqrt(sq/M), thresh=mean+1.6*std; // sensitivity
+  const now=performance.now();
+  if(flux>thresh && (now-lastOnset)>120){ lastOnset=now; beat(); }
+  rafId=requestAnimationFrame(processAudio);
 }
+$('#tab').onclick = async ()=>{ try{ await startWithTab(); $('#msg').textContent='Tab audio running (make sure “Share tab audio” was enabled).'; }catch(e){ $('#msg').textContent='Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'; } };
+$('#mic').onclick = async ()=>{ try{ await startWithMic(); $('#msg').textContent='Mic capture running (turn speakers up a bit).'; }catch(e){ $('#msg').textContent='Mic permission denied.'; } };
 
-/* ===== UI wiring for audio ===== */
-$('#startTab').addEventListener('click', async ()=>{
-  try{ await startWithTabAudio(); hideWarn(); }
-  catch(e){ showWarn('Tab audio capture was blocked. On Chrome, pick “Chrome Tab → This tab” and enable “Share tab audio”.'); }
-});
-$('#startMic').addEventListener('click', async ()=>{
-  try{ await startWithMic(); hideWarn(); }
-  catch(e){ showWarn('Microphone permission denied. Allow mic or try Tab Audio.'); }
-});
-$('#sens').addEventListener('input', ()=>{/* live-updated in processAudio */});
-
-/* ===== Math → images (MathJax SVG) ===== */
-const famous = [
+/* ===== Math → SVG → Image ===== */
+const equations = [
   String.raw`e^{i\pi}+1=0`,
   String.raw`\int_{-\infty}^{\infty} e^{-x^2}\,dx=\sqrt{\pi}`,
-  String.raw`\sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6}`,
-  String.raw`\nabla\cdot\vec{E}=\rho/\varepsilon_0`,
   String.raw`a^2+b^2=c^2`,
   String.raw`E=mc^2`,
-  String.raw`\int_a^b f'(x)\,dx=f(b)-f(a)`,
-  String.raw`\lim_{x\to 0}\frac{\sin x}{x}=1`,
-  String.raw`\Pr(A|B)=\frac{\Pr(A\cap B)}{\Pr(B)}`
+  String.raw`\sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6}`,
+  String.raw`\nabla\cdot\vec{E}=\rho/\varepsilon_0`
 ];
-$('#defaults').addEventListener('click', ()=>{ $('#eqInput').value=famous.join("\n"); buildSprites(); });
-$('#applyEq').addEventListener('click', buildSprites);
-$('#count').addEventListener('input', ()=>{ $('#countVal').textContent=$('#count').value; buildSprites(); });
-
-async function texToImage(tex, color='#e8edff'){
-  await MathJax.startup.promise;
-  const node = MathJax.tex2svg(tex, {display:true});
-  const svg = node.querySelector('svg');
+async function texToImg(tex, color='#e8edff'){
+  await MathJax.startup.promise;              // ensure MathJax ready
+  const node = MathJax.tex2svg(tex,{display:true});
+  const svg  = node.querySelector('svg');
   svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
   svg.setAttribute('fill', color);
   const str = new XMLSerializer().serializeToString(svg);
-  const blob = new Blob([str], {type:'image/svg+xml'});
-  const url = URL.createObjectURL(blob);
-  const img = new Image();
-  img.onload = ()=> URL.revokeObjectURL(url);
-  img.src = url;
-  await img.decode?.().catch(()=>{});
-  return img;
+  const url = URL.createObjectURL(new Blob([str],{type:'image/svg+xml'}));
+  const img = new Image(); img.onload=()=>URL.revokeObjectURL(url); img.src=url;
+  await img.decode?.().catch(()=>{}); return img;
 }
 
-/* ===== Canvas scene ===== */
-const starC = $('#stars'), mainC = $('#main');
-const starCtx = starC.getContext('2d'), ctx = mainC.getContext('2d');
-let sprites=[], stars=[];
+/* ===== Canvas scene (always moving) ===== */
+const bg = $('#bg'), main = $('#main');
+const bctx = bg.getContext('2d'), ctx = main.getContext('2d');
+let W=0,H=0, sprites=[], hue=260;
 function resize(){
-  const dpr=Math.max(1, window.devicePixelRatio||1);
-  [starC, mainC].forEach(c=>{ c.width=c.clientWidth*dpr; c.height=c.clientHeight*dpr; const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); });
-  makeStars();
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  [bg,main].forEach(c=>{ c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width='100%';c.style.height='100%'; c.getContext('2d').setTransform(dpr,0,0,dpr,0,0); });
+  W=innerWidth; H=innerHeight;
 }
-window.addEventListener('resize', resize); resize();
+addEventListener('resize', resize); resize();
 
-function makeStars(){
-  const w=starC.clientWidth,h=starC.clientHeight, n=Math.floor((w*h)/7000);
-  stars=Array.from({length:n},()=>({x:Math.random()*w,y:Math.random()*h,z:Math.random()*1+.2,r:Math.random()*1.6+.2,tw:Math.random()*Math.PI*2}));
-}
 function drawStars(){
-  const w=starC.clientWidth,h=starC.clientHeight; starCtx.clearRect(0,0,w,h);
-  const hue=getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
-  for(const s of stars){
-    s.tw+=0.03; const a=(Math.sin(s.tw)+1)/2*.85+.05;
-    starCtx.fillStyle=`hsla(${hue},100%,80%,${a*0.7})`; starCtx.beginPath(); starCtx.arc(s.x,s.y,s.r*s.z,0,Math.PI*2); starCtx.fill();
-    s.x -= 0.02*s.z; if(s.x<-2) s.x=w+2; s.y += 0.01*s.z; if(s.y>h+2) s.y=-2;
+  bctx.clearRect(0,0,W,H);
+  for(let i=0;i<240;i++){
+    const x=(i*97)%W, y=(i*57)%H, z=(i%5)/5+0.2, r=(i%3)+0.5;
+    const a = (Math.sin(performance.now()*0.001 + i)*0.5+0.5)*0.7+0.1;
+    bctx.fillStyle=`hsla(${hue},100%,80%,${a*0.6})`;
+    bctx.beginPath(); bctx.arc(x,y,r*z,0,Math.PI*2); bctx.fill();
   }
-  requestAnimationFrame(drawStars);
 }
-drawStars();
 
-/* sprite = {img,w,h,r,angle,spd,bob,rot,scale,kick} */
+function randomSprite(img){
+  const r = Math.min(W,H)*rand(0.18,0.42);
+  return { img, w: img.width*0.65, h: img.height*0.65,
+           r, a: rand(0,Math.PI*2), spd: rand(-0.6,0.6), rot: rand(-0.2,0.2),
+           bob: rand(0.6,1.6), scale: rand(0.6,1.1), kick:0 };
+}
+
 async function buildSprites(){
-  const lines = ($('#eqInput').value||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
-  if(!lines.length) lines.push(...famous);
-  const count = parseInt($('#count').value,10);
-  const need = Math.max(count, 3);
-  sprites = [];
-  const hue=getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
   const color=`hsl(${hue},100%,88%)`;
-
-  const imgs = await Promise.all(lines.map(tex=>texToImage(tex, color)).slice(0, need));
-  const W=mainC.clientWidth,H=mainC.clientHeight, cx=W/2, cy=H/2;
-  for(let i=0;i<need;i++){
-    const img = imgs[i % imgs.length];
-    const scale = rand(.6, 1.1);
-    sprites.push({
-      img, w: img.width*0.6, h: img.height*0.6,
-      r: rand(Math.min(W,H)*0.18, Math.min(W,H)*0.42),
-      angle: rand(0, Math.PI*2),
-      spd: rand(-0.7,0.7)*(Math.random()<.5?1:-1),
-      bob: rand(0.6,1.6),
-      rot: rand(-0.2,0.2),
-      scale, kick: 0
-    });
-  }
+  const imgs = await Promise.all(equations.map(t=>texToImg(t,color)));
+  sprites = [];
+  for(let i=0;i<12;i++) sprites.push( randomSprite(imgs[i % imgs.length]) );
 }
 buildSprites();
 
-/* animation */
-let lastT=performance.now();
-function draw(){
-  const now=performance.now(), dt=Math.min(0.05, (now-lastT)/1000); lastT=now;
-  const W=mainC.clientWidth,H=mainC.clientHeight, cx=W/2, cy=H/2;
+let last=performance.now();
+function tick(){
+  drawStars();
+  const now=performance.now(), dt=Math.min(0.05,(now-last)/1000); last=now;
+  const cx=W/2, cy=H/2;
   ctx.clearRect(0,0,W,H);
   ctx.save(); ctx.globalCompositeOperation='lighter';
-
   for(const s of sprites){
-    s.angle += s.spd * dt * 0.4;
-    const x = cx + Math.cos(s.angle)*s.r;
-    const y = cy + Math.sin(s.angle)*s.r*0.7 + Math.sin(now*0.001*s.bob)*6;
-
-    // decay kick
-    s.kick *= Math.pow(0.001, dt);
+    s.a += s.spd * dt * 0.45;
+    const x = cx + Math.cos(s.a)*s.r;
+    const y = cy + Math.sin(s.a)*s.r*0.7 + Math.sin(now*0.001*s.bob)*6;
+    s.kick *= Math.pow(0.001, dt);            // decay energy
     const k = 1 + 0.25*s.kick;
-
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(s.rot + Math.sin(now*0.0007 + s.r*0.001)*0.08);
     ctx.scale(k*s.scale, k*s.scale);
-    ctx.shadowColor = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--hue').trim()},100%,70%,.65)`;
-    ctx.shadowBlur = 18;
+    ctx.shadowColor=`hsla(${hue},100%,70%,.65)`; ctx.shadowBlur=18;
     ctx.drawImage(s.img, -s.w/2, -s.h/2, s.w, s.h);
     ctx.restore();
   }
   ctx.restore();
-  requestAnimationFrame(draw);
+  requestAnimationFrame(tick);
 }
-draw();
+tick();
 
-/* visual beat trigger */
+/* ===== Beat visual ===== */
 function beat(){
-  // add energy to each sprite
   for(const s of sprites){ s.kick = Math.min(1, s.kick + 1); }
-  // color pulse
-  const hue = Math.floor(rand(0,360)); document.documentElement.style.setProperty('--hue', hue); $('#hueVal').textContent=hue;
-  const neb = $('#nebula'); neb.style.opacity='1'; neb.animate([{opacity:.2},{opacity:.9},{opacity:.2}], {duration:420, easing:'ease-in-out'});
-  // counter
-  beatCount++; $('#beatCount').textContent = beatCount;
+  hue = Math.floor(rand(0,360));
 }
-$('#newHue').addEventListener('click', ()=> beat());
+$('#hue').onclick = ()=>{ hue=Math.floor(rand(0,360)); buildSprites(); };
 
-/* init labels */
-$('#countVal').textContent = $('#count').value;
-$('#hueVal').textContent = getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
+/* ===== Wire buttons ===== */
+document.addEventListener('keydown', e=>{ if(e.key===' ') beat(); });
 </script>
 </body>
 </html>
