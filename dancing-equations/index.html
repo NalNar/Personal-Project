@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Dancing Equations — Intergalactic (Canvas)</title>
+<title>Dancing Equations — Audio-Reactive</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<!-- MathJax: SVG output so we can draw equations as images onto canvas -->
+<!-- MathJax SVG output so we can rasterize onto canvas -->
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -38,8 +38,8 @@
 <div class="wrap">
   <!-- controls -->
   <div class="panel">
-    <h1>🪐 Dancing Equations (Canvas)</h1>
-    <div class="sub">Paste a YouTube link, set BPM (tap), and your equations will dance as graphics.</div>
+    <h1>🪐 Dancing Equations (Audio-Reactive)</h1>
+    <div class="sub">Play a YouTube song below, then click <b>Start Tab Audio</b> to make equations dance to the beat.</div>
 
     <label>YouTube URL</label>
     <div class="row">
@@ -59,39 +59,24 @@
     </div>
 
     <label>Visual count</label>
-    <input id="count" type="range" min="3" max="24" value="10" />
-    <div class="muted"><span id="countVal">10</span> sprites</div>
+    <input id="count" type="range" min="3" max="24" value="12" />
+    <div class="muted"><span id="countVal">12</span> sprites</div>
 
-    <label>Song BPM (tap to detect)</label>
+    <hr style="border-color:rgba(255,255,255,.08); margin:12px 0">
+
+    <label>Beat Source</label>
     <div class="row">
-      <input id="bpm" type="number" min="30" max="240" value="120"/>
-      <button id="tap" class="pill">Tap</button>
-      <button id="half" class="pill">÷2</button>
-      <button id="double" class="pill">×2</button>
+      <button id="startTab" class="primary">Start Tab Audio</button>
+      <button id="startMic" class="ghost">Use Microphone</button>
     </div>
-    <div class="row">
-      <div>
-        <label>Beat offset (ms)</label>
-        <input id="offset" type="number" value="0"/>
-      </div>
-      <div>
-        <label>Subdivision</label>
-        <select id="subdiv">
-          <option value="1" selected>Quarter</option>
-          <option value="2">Eighth</option>
-          <option value="4">Sixteenth</option>
-          <option value="3">Triplet</option>
-        </select>
-      </div>
+    <div class="row" style="margin-top:6px">
+      <label>Sensitivity</label>
+      <input id="sens" type="range" min="0.5" max="3.0" step="0.05" value="1.6" />
     </div>
+    <div class="muted">Tip: On Chrome, choose <b>“Chrome Tab → This tab”</b> and ensure <b>“Share tab audio”</b> is on.</div>
 
     <div class="row" style="margin-top:10px">
-      <button id="playPause">▶️ Play</button>
       <button id="newHue">🎨 New Cosmic Hue</button>
-    </div>
-
-    <div class="muted" style="margin-top:8px">
-      Tip: browsers don’t expose raw audio from YouTube, so the pulse follows your BPM (tap helps).
     </div>
   </div>
 
@@ -113,16 +98,16 @@
       </div>
     </div>
 
-    <div class="note">Hue <b id="hueVal">260</b>° • BPM <b id="bpmVal">120</b></div>
+    <div class="note">Hue <b id="hueVal">260</b>° • Beats detected: <b id="beatCount">0</b></div>
   </div>
 </div>
 
 <script>
-/* ---------- helpers ---------- */
+/* ===== helpers ===== */
 const $ = s=>document.querySelector(s);
-const rand=(a,b)=>a+Math.random()*(b-a); const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
 
-/* ---------- YouTube ---------- */
+/* ===== YouTube player ===== */
 let ytPlayer=null, videoId=null;
 function parseVideoId(url){
   try{const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
@@ -131,9 +116,9 @@ function parseVideoId(url){
 }
 window.onYouTubeIframeAPIReady = () => {
   ytPlayer = new YT.Player('player', {
-    videoId: 'dQw4w9WgXcQ',
+    videoId:'dQw4w9WgXcQ',
     playerVars:{playsinline:1,rel:0,modestbranding:1,controls:1},
-    events:{onStateChange: ev=>{ if(ev.data===YT.PlayerState.PLAYING){rescheduleBeats();} updateDock(); }}
+    events:{ onStateChange: ()=>updateDock() }
   });
 };
 $('#loadBtn').addEventListener('click', ()=>{
@@ -144,38 +129,98 @@ $('#loadBtn').addEventListener('click', ()=>{
 $('#dockPlay').addEventListener('click', ()=>{ const s=ytPlayer.getPlayerState(); (s===1?ytPlayer.pauseVideo():ytPlayer.playVideo()); updateDock(); });
 $('#dockMute').addEventListener('click', ()=> ytPlayer.isMuted()?ytPlayer.unMute():ytPlayer.mute());
 $('#dockSeek').addEventListener('input', ()=>{ const d=ytPlayer.getDuration?.()||0; ytPlayer.seekTo(d*($('#dockSeek').value/100), true); });
-function updateDock(){ if(!ytPlayer) return; const s=ytPlayer.getPlayerState(); $('#playPause').textContent = (s===1?'⏸️ Pause':'▶️ Play'); $('#dockPlay').textContent=(s===1?'Pause':'Play'); $('#dockMute').textContent=ytPlayer.isMuted()?'Unmute':'Mute'; }
+function updateDock(){ if(!ytPlayer) return; const s=ytPlayer.getPlayerState(); $('#dockPlay').textContent=(s===1?'Pause':'Play'); $('#dockMute').textContent=ytPlayer.isMuted()?'Unmute':'Mute'; }
 function updateSeekLoop(){ const d=ytPlayer.getDuration?.()||0; if(d>0){ setInterval(()=>{ const t=ytPlayer.getCurrentTime?.()||0; $('#dockSeek').value=(t/d)*100; }, 250);} }
-$('#playPause').addEventListener('click', ()=>$('#dockPlay').click());
 function showWarn(msg){ const w=$('#warn'); w.textContent=msg; w.style.display='block'; }
 function hideWarn(){ $('#warn').style.display='none'; }
 
-/* ---------- BPM / beat engine ---------- */
-let bpm=120, beatInt=0.5, beatTimer=null, taps=[];
-const bpmInput=$('#bpm'); const bpmVal=$('#bpmVal'); const offsetInput=$('#offset'); const subdiv=$('#subdiv');
-bpmInput.addEventListener('input', ()=>{ bpm=clamp(parseFloat(bpmInput.value)||120,30,240); bpmVal.textContent=bpm; rescheduleBeats();});
-$('#half').addEventListener('click', ()=>{ bpm=clamp((parseFloat(bpmInput.value)||120)/2,30,240); bpmInput.value=bpm; bpmVal.textContent=bpm; rescheduleBeats();});
-$('#double').addEventListener('click', ()=>{ bpm=clamp((parseFloat(bpmInput.value)||120)*2,30,240); bpmInput.value=bpm; bpmVal.textContent=bpm; rescheduleBeats();});
-$('#tap').addEventListener('click', ()=>{ const now=performance.now(); taps.push(now); if(taps.length>6) taps.shift();
-  if(taps.length>=2){ const ints=[]; for(let i=1;i<taps.length;i++) ints.push(taps[i]-taps[i-1]); ints.sort((a,b)=>a-b);
-    const slice=ints.slice(1, ints.length-1); const avg=(slice.length?slice:ints).reduce((a,b)=>a+b,0)/((slice.length?slice:ints).length);
-    bpm=Math.round(clamp(60000/avg,30,240)); bpmInput.value=bpm; bpmVal.textContent=bpm; rescheduleBeats(); }
-});
-subdiv.addEventListener('change', rescheduleBeats); offsetInput.addEventListener('input', rescheduleBeats);
-function rescheduleBeats(){ if(beatTimer){clearTimeout(beatTimer); beatTimer=null;} scheduleBeats(); }
-function scheduleBeats(){
-  const sub=parseInt(subdiv.value,10)||1; beatInt=(60/bpm)/sub;
-  const playing = ytPlayer && ytPlayer.getPlayerState?.()===1;
-  if(!playing){ /* still pulse slowly so it feels alive */ kick(0.25); setTimeout(scheduleBeats, 900); return; }
-  const t = ytPlayer.getCurrentTime?.()||0; const off=(parseInt(offsetInput.value,10)||0)/1000;
-  const phase=(t+off)%beatInt; const wait=(beatInt-phase); beatTimer=setTimeout(beatLoop, wait*1000);
+/* ===== Audio capture & beat detection ===== */
+let audioCtx, analyser, srcNode, procId=null;
+let prevMag = null, fluxHist = [], lastOnset = 0, beatCount = 0;
+
+async function startWithTabAudio(){
+  stopAudio();
+  // Some browsers require video:true to capture audio
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: { frameRate: 1 }, // minimal video track
+    audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
+  });
+  initAudio(stream);
 }
-function beatLoop(){
-  kick(1);
-  beatTimer=setTimeout(beatLoop, beatInt*1000);
+async function startWithMic(){
+  stopAudio();
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
+  });
+  initAudio(stream);
+}
+function stopAudio(){
+  if (procId) cancelAnimationFrame(procId), procId=null;
+  if (srcNode && srcNode.mediaStream){ srcNode.mediaStream.getTracks().forEach(t=>t.stop()); }
+  if (audioCtx) { audioCtx.close(); }
+  srcNode = analyser = audioCtx = null;
+  prevMag = null; fluxHist = []; lastOnset = 0;
+}
+function initAudio(stream){
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  srcNode = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.5;
+  srcNode.connect(analyser);
+  processAudio();
+}
+function processAudio(){
+  if (!analyser) return;
+  const N = analyser.frequencyBinCount;
+  const freq = new Float32Array(N);
+  analyser.getFloatFrequencyData(freq); // dB values (negative)
+  // convert to linear magnitudes
+  const mag = new Float32Array(N);
+  for (let i=0;i<N;i++){ mag[i] = Math.pow(10, freq[i]/20); }
+
+  // spectral flux (half-wave rectified)
+  if (!prevMag) prevMag = mag;
+  let flux = 0;
+  for (let i=0;i<N;i++){
+    const d = mag[i] - prevMag[i];
+    if (d > 0) flux += d;
+  }
+  prevMag = mag;
+
+  // adaptive threshold: mean + k*std over last ~0.8s
+  const windowSize = 43; // ~43 frames ≈ 0.7–0.8s depending on rAF timing
+  fluxHist.push(flux);
+  if (fluxHist.length > 120) fluxHist.shift(); // cap history
+  const k = parseFloat($('#sens').value); // sensitivity
+  const M = Math.min(windowSize, fluxHist.length);
+  let mean = 0, sq = 0;
+  for (let i=fluxHist.length-M;i<fluxHist.length;i++){ mean += fluxHist[i]; }
+  mean /= M;
+  for (let i=fluxHist.length-M;i<fluxHist.length;i++){ const v=fluxHist[i]-mean; sq += v*v; }
+  const std = Math.sqrt(sq / M);
+  const thresh = mean + k*std;
+
+  const now = performance.now();
+  if (flux > thresh && (now - lastOnset) > 120){ // refractory ~120ms
+    lastOnset = now; beat(); // trigger visual kick
+  }
+
+  procId = requestAnimationFrame(processAudio);
 }
 
-/* ---------- math → image (via MathJax SVG) ---------- */
+/* ===== UI wiring for audio ===== */
+$('#startTab').addEventListener('click', async ()=>{
+  try{ await startWithTabAudio(); hideWarn(); }
+  catch(e){ showWarn('Tab audio capture was blocked. On Chrome, pick “Chrome Tab → This tab” and enable “Share tab audio”.'); }
+});
+$('#startMic').addEventListener('click', async ()=>{
+  try{ await startWithMic(); hideWarn(); }
+  catch(e){ showWarn('Microphone permission denied. Allow mic or try Tab Audio.'); }
+});
+$('#sens').addEventListener('input', ()=>{/* live-updated in processAudio */});
+
+/* ===== Math → images (MathJax SVG) ===== */
 const famous = [
   String.raw`e^{i\pi}+1=0`,
   String.raw`\int_{-\infty}^{\infty} e^{-x^2}\,dx=\sqrt{\pi}`,
@@ -192,8 +237,8 @@ $('#applyEq').addEventListener('click', buildSprites);
 $('#count').addEventListener('input', ()=>{ $('#countVal').textContent=$('#count').value; buildSprites(); });
 
 async function texToImage(tex, color='#e8edff'){
-  await MathJax.startup.promise; // ensure ready
-  const node = MathJax.tex2svg(tex, {display:true}); // returns mjx-container
+  await MathJax.startup.promise;
+  const node = MathJax.tex2svg(tex, {display:true});
   const svg = node.querySelector('svg');
   svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
   svg.setAttribute('fill', color);
@@ -207,7 +252,7 @@ async function texToImage(tex, color='#e8edff'){
   return img;
 }
 
-/* ---------- canvas scene ---------- */
+/* ===== Canvas scene ===== */
 const starC = $('#stars'), mainC = $('#main');
 const starCtx = starC.getContext('2d'), ctx = mainC.getContext('2d');
 let sprites=[], stars=[];
@@ -244,7 +289,6 @@ async function buildSprites(){
   const hue=getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
   const color=`hsl(${hue},100%,88%)`;
 
-  // preload images
   const imgs = await Promise.all(lines.map(tex=>texToImage(tex, color)).slice(0, need));
   const W=mainC.clientWidth,H=mainC.clientHeight, cx=W/2, cy=H/2;
   for(let i=0;i<need;i++){
@@ -263,6 +307,7 @@ async function buildSprites(){
 }
 buildSprites();
 
+/* animation */
 let lastT=performance.now();
 function draw(){
   const now=performance.now(), dt=Math.min(0.05, (now-lastT)/1000); lastT=now;
@@ -276,14 +321,13 @@ function draw(){
     const y = cy + Math.sin(s.angle)*s.r*0.7 + Math.sin(now*0.001*s.bob)*6;
 
     // decay kick
-    s.kick *= Math.pow(0.001, dt); // fast decay
+    s.kick *= Math.pow(0.001, dt);
     const k = 1 + 0.25*s.kick;
 
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(s.rot + Math.sin(now*0.0007 + s.r*0.001)*0.08);
     ctx.scale(k*s.scale, k*s.scale);
-    // soft glow
     ctx.shadowColor = `hsla(${getComputedStyle(document.documentElement).getPropertyValue('--hue').trim()},100%,70%,.65)`;
     ctx.shadowBlur = 18;
     ctx.drawImage(s.img, -s.w/2, -s.h/2, s.w, s.h);
@@ -294,21 +338,21 @@ function draw(){
 }
 draw();
 
-/* kick effect on beat */
-function kick(str=1){
-  for(const s of sprites){ s.kick = Math.min(1, s.kick + str); }
-  // background hue pulse
+/* visual beat trigger */
+function beat(){
+  // add energy to each sprite
+  for(const s of sprites){ s.kick = Math.min(1, s.kick + 1); }
+  // color pulse
   const hue = Math.floor(rand(0,360)); document.documentElement.style.setProperty('--hue', hue); $('#hueVal').textContent=hue;
   const neb = $('#nebula'); neb.style.opacity='1'; neb.animate([{opacity:.2},{opacity:.9},{opacity:.2}], {duration:420, easing:'ease-in-out'});
+  // counter
+  beatCount++; $('#beatCount').textContent = beatCount;
 }
-$('#newHue').addEventListener('click', ()=> kick(0.6));
+$('#newHue').addEventListener('click', ()=> beat());
 
-/* resync beats when playing */
-setInterval(()=>{ if(ytPlayer && ytPlayer.getPlayerState?.()===1 && !beatTimer) scheduleBeats(); }, 800);
-
-/* initial UI values */
-$('#bpmVal').textContent = $('#bpm').value;
+/* init labels */
 $('#countVal').textContent = $('#count').value;
+$('#hueVal').textContent = getComputedStyle(document.documentElement).getPropertyValue('--hue').trim();
 </script>
 </body>
 </html>
