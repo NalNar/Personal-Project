@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>UniPath</title>
+  <link rel="stylesheet" href="styles.css">
+  <style> body { width: 360px; } </style>
+</head>
+<body>
+  <header class="hdr">
+    <div class="logo">🎓</div>
+    <div class="title">UniPath</div>
+    <a class="link" id="manage" href="#">Manage</a>
+  </header>
+
+  <section id="videoBox" class="card"></section>
+
+  <section class="card">
+    <h3>Add to Course</h3>
+    <label class="lbl">Choose course</label>
+    <select id="courseSelect"></select>
+    <div class="divider"><span>or</span></div>
+    <label class="lbl">New course</label>
+    <input id="newCourseTitle" placeholder="e.g., Data Structures with YouTube"/>
+    <textarea id="newCourseDesc" placeholder="One-line description (optional)"></textarea>
+
+    <label class="lbl">Module title</label>
+    <input id="moduleTitle" placeholder="e.g., Week 1: Arrays & Lists"/>
+
+    <label class="lbl">Lesson objectives (optional)</label>
+    <textarea id="lessonObjectives" placeholder="Bullet points or comma-separated"></textarea>
+
+    <button id="addBtn" class="btn primary">Add Video</button>
+  </section>
+
+  <section class="muted">Tip: Open Options to generate a full path from a **Majors** pick‑list.</section>
+
+  <script src="utils.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
