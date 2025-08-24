@@ -1,20 +1,31 @@
-<!doctype html>
+# Create a ready-to-upload Canvas build (v2) that forces the graphical version.
+# It includes a visible "Canvas v2" badge so the user can confirm they're on the right file.
+index_html = r"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Dancing Equations — Audio Reactive (Minimal Canvas)</title>
+<title>Dancing Equations — Audio Reactive (Canvas v2)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<!-- IMPORTANT: Tell MathJax not to auto typeset the page; we'll call tex2svg manually -->
+<script>
+  window.MathJax = { startup: { typeset: false } };
+</script>
 <!-- MathJax (SVG output) -->
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <!-- YouTube IFrame API (optional player) -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
-  html,body{height:100%;margin:0;background:#0a0f24;color:#e8edff;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+  html,body{height:100%;margin:0;background:#0a0f24;color:#e8edff;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto;overflow:hidden}
   .ui{position:fixed;left:12px;top:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;z-index:3}
   .ui input,.ui button{border:1px solid #314177;background:#0f1636;color:#e8edff;border-radius:10px;padding:9px 12px}
-  .ui input{flex:1}
+  .ui input{flex:1;min-width:260px}
   .ui .btn{cursor:pointer}
-  #msg{position:fixed;left:12px;bottom:12px;color:#a8b3d6;font-size:12px}
+  .badge{position:fixed;left:12px;top:56px;background:#17204a;border:1px solid #2a397b;color:#b8c7ff;border-radius:999px;padding:4px 10px;font-size:12px;z-index:3;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  #msg{position:fixed;left:12px;bottom:12px;color:#a8b3d6;font-size:12px;z-index:3}
+  #player{position:fixed;right:12px;bottom:12px;width:340px;max-width:45vw;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;z-index:2}
   canvas{position:fixed;inset:0}
 </style>
 </head>
@@ -26,8 +37,9 @@
     <button id="mic"  class="btn">Use Microphone</button>
     <button id="hue"  class="btn">New Hue</button>
   </div>
-  <div id="msg">Tip: If you only see plain “e^{iπ}+1=0”, you’re on the wrong file. This version draws on <b>canvas</b> and always animates.</div>
-  <div id="player" style="position:fixed;right:12px;bottom:12px;width:340px;max-width:45vw;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;z-index:2"></div>
+  <div class="badge" id="badge">Canvas build v2 • MathJax: <b id="mjxState">loading…</b> • Sprites: <b id="spCount">0</b></div>
+  <div id="msg">Tip: If you still see raw LaTeX like <code>\\[ e^{i\\pi}+1=0 \\]</code> as DOM text, you're viewing an older page. This one draws on <b>canvas</b>.</div>
+  <div id="player"></div>
   <canvas id="bg"></canvas>
   <canvas id="main"></canvas>
 
@@ -42,7 +54,7 @@ function parseVideoId(url){
   try{const u=new URL(url);
     if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
     if(u.searchParams.get('v')) return u.searchParams.get('v');
-    const m=url.match(/\/embed\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;
+    const m=url.match(/\\/embed\\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;
   }catch{ return null; }
 }
 window.onYouTubeIframeAPIReady = () => {
@@ -94,20 +106,22 @@ function processAudio(){
   if(flux>thresh && (now-lastOnset)>120){ lastOnset=now; beat(); }
   rafId=requestAnimationFrame(processAudio);
 }
-$('#tab').onclick = async ()=>{ try{ await startWithTab(); $('#msg').textContent='Tab audio running (make sure “Share tab audio” was enabled).'; }catch(e){ $('#msg').textContent='Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'; } };
-$('#mic').onclick = async ()=>{ try{ await startWithMic(); $('#msg').textContent='Mic capture running (turn speakers up a bit).'; }catch(e){ $('#msg').textContent='Mic permission denied.'; } };
+$('#tab').onclick = async ()=>{ try{ await startWithTab(); $('#msg').textContent='Tab audio running (enable “Share tab audio”).'; }catch(e){ $('#msg').textContent='Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'; } };
+$('#mic').onclick = async ()=>{ try{ await startWithMic(); $('#msg').textContent='Mic capture running.'; }catch(e){ $('#msg').textContent='Mic permission denied.'; } };
 
-/* ===== Math → SVG → Image ===== */
+/* ===== Math → SVG → Image (force use of MathJax.tex2svg) ===== */
 const equations = [
-  String.raw`e^{i\pi}+1=0`,
-  String.raw`\int_{-\infty}^{\infty} e^{-x^2}\,dx=\sqrt{\pi}`,
+  String.raw`e^{i\\pi}+1=0`,
+  String.raw`\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx=\\sqrt{\\pi}`,
   String.raw`a^2+b^2=c^2`,
   String.raw`E=mc^2`,
-  String.raw`\sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6}`,
-  String.raw`\nabla\cdot\vec{E}=\rho/\varepsilon_0`
+  String.raw`\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}`,
+  String.raw`\\nabla\\cdot\\vec{E}=\\rho/\\varepsilon_0`
 ];
 async function texToImg(tex, color='#e8edff'){
-  await MathJax.startup.promise;              // ensure MathJax ready
+  // Wait for MathJax to finish loading
+  await (window.MathJax?.startup?.promise || Promise.resolve());
+  $('#mjxState').textContent = 'ready';
   const node = MathJax.tex2svg(tex,{display:true});
   const svg  = node.querySelector('svg');
   svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
@@ -115,7 +129,8 @@ async function texToImg(tex, color='#e8edff'){
   const str = new XMLSerializer().serializeToString(svg);
   const url = URL.createObjectURL(new Blob([str],{type:'image/svg+xml'}));
   const img = new Image(); img.onload=()=>URL.revokeObjectURL(url); img.src=url;
-  await img.decode?.().catch(()=>{}); return img;
+  await img.decode?.().catch(()=>{});
+  return img;
 }
 
 /* ===== Canvas scene (always moving) ===== */
@@ -147,10 +162,12 @@ function randomSprite(img){
 }
 
 async function buildSprites(){
+  $('#mjxState').textContent = 'loading…';
   const color=`hsl(${hue},100%,88%)`;
   const imgs = await Promise.all(equations.map(t=>texToImg(t,color)));
   sprites = [];
   for(let i=0;i<12;i++) sprites.push( randomSprite(imgs[i % imgs.length]) );
+  $('#spCount').textContent = sprites.length;
 }
 buildSprites();
 
@@ -165,7 +182,7 @@ function tick(){
     s.a += s.spd * dt * 0.45;
     const x = cx + Math.cos(s.a)*s.r;
     const y = cy + Math.sin(s.a)*s.r*0.7 + Math.sin(now*0.001*s.bob)*6;
-    s.kick *= Math.pow(0.001, dt);            // decay energy
+    s.kick *= Math.pow(0.001, dt); // decay
     const k = 1 + 0.25*s.kick;
     ctx.save();
     ctx.translate(x,y);
@@ -189,6 +206,22 @@ $('#hue').onclick = ()=>{ hue=Math.floor(rand(0,360)); buildSprites(); };
 
 /* ===== Wire buttons ===== */
 document.addEventListener('keydown', e=>{ if(e.key===' ') beat(); });
+
+/* ===== Buttons start audio ===== */
+// These are bound after the DOM is ready
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('#tab').addEventListener('click', async ()=>{
+    try{ await startWithTab(); $('#msg').textContent='Tab audio running (enable “Share tab audio”).'; }catch(e){ $('#msg').textContent='Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'; }
+  });
+  $('#mic').addEventListener('click', async ()=>{
+    try{ await startWithMic(); $('#msg').textContent='Mic capture running.'; }catch(e){ $('#msg').textContent='Mic permission denied.'; }
+  });
+});
 </script>
 </body>
 </html>
+"""
+from pathlib import Path
+p = Path("/mnt/data/index_canvas_v2.html")
+p.write_text(index_html, encoding="utf-8")
+str(p)
