@@ -1,25 +1,26 @@
-<!doctype html>
+# Create a single-file "Graph Dancer v3" with inline CSS/JS and a visible version badge.
+from pathlib import Path
+
+v3 = r"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Graph Dancer — Audio‑Reactive sin(x)</title>
+<title>Graph Dancer v3 — Audio‑Reactive sin(x)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
   :root{ --bg:#070a1a; --ink:#e8edff; --muted:#a8b3d6; --hue:210; }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 80% 20%, rgba(60,80,200,.12), transparent 60%), var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto}
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 80% 20%, rgba(60,80,200,.12), transparent 60%), var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto; overflow:hidden}
   .ui{position:fixed; left:12px; right:12px; top:12px; display:flex; gap:10px; flex-wrap:wrap; z-index:3; align-items:center}
   .ui input,.ui button{border:1px solid rgba(255,255,255,.12); background:#0f1536; color:var(--ink); border-radius:10px; padding:9px 12px}
   .ui input[type="range"]{padding:0; height:34px}
   .ui input:focus{outline:none; border-color:#5b7cff; box-shadow:0 0 0 4px rgba(91,124,255,.25)}
-  .ui .btn{cursor:pointer; background:#24306b}
-  .ui .primary{background:#3a63ff}
+  .btn{cursor:pointer; background:#24306b} .primary{background:#3a63ff}
+  label{font-size:12px; color:var(--muted)} .stack{display:flex; gap:8px; align-items:center}
+  #player{position:fixed; right:12px; bottom:12px; width:340px; max-width:45vw; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden; z-index:2}
+  canvas{position:fixed; inset:0}
   .badge{position:fixed; left:12px; top:56px; background:#12183c; border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:4px 10px; font-size:12px; z-index:3; color:#c9d7ff}
   .note{position:fixed; left:12px; bottom:12px; color:var(--muted); font-size:12px; z-index:3}
-  #player{position:fixed; right:12px; bottom:12px; width:340px; max-width:45vw; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden; z-index:2}
-  canvas{position:fixed; inset:0;}
-  label{font-size:12px; color:var(--muted)}
-  .stack{display:flex; gap:8px; align-items:center}
 </style>
 </head>
 <body>
@@ -41,181 +42,155 @@
     <button id="tab"  class="btn primary">Start Tab Audio</button>
     <button id="mic"  class="btn">Use Microphone</button>
   </div>
-  <div class="badge">Graph Dancer • hue <b id="hueVal">210</b> • beats <b id="beats">0</b></div>
+
+  <div class="badge">Graph Dancer <b>v3</b> • hue <b id="hueVal">210</b> • beats <b id="beats">0</b></div>
   <div class="note">Spacebar = manual beat. Lower <b>sens</b> → more triggers.</div>
+
   <div id="player"></div>
   <canvas id="bg"></canvas>
   <canvas id="main"></canvas>
 
-<script>
-/* ===== helpers ===== */
-const $ = s=>document.querySelector(s);
-const rand=(a,b)=>a+Math.random()*(b-a);
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+  // ===== helpers =====
+  const $ = s=>document.querySelector(s);
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  console.log('Graph Dancer v3 loaded');
 
-/* ===== YouTube (optional) ===== */
-let ytPlayer=null;
-function parseVideoId(url){
-  try{const u=new URL(url);
-    if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
-    if(u.searchParams.get('v')) return u.searchParams.get('v');
-    const m=url.match(/\\/embed\\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;
-  }catch{ return null; }
-}
-window.onYouTubeIframeAPIReady = () => {
-  ytPlayer = new YT.Player('player', { videoId:'dQw4w9WgXcQ', playerVars:{playsinline:1,rel:0,modestbranding:1,controls:1} });
-};
-$('#load').onclick = ()=>{
-  const id = parseVideoId($('#yt').value.trim());
-  if(id) ytPlayer?.loadVideoById(id);
-};
-
-/* ===== Audio capture + beat detection (spectral flux) ===== */
-let audioCtx, analyser, srcNode, rafId=null, prevMag=null, fluxHist=[], lastOnset=0, beatCount=0;
-function stopAudio(){
-  if(rafId) cancelAnimationFrame(rafId), rafId=null;
-  if(srcNode?.mediaStream) srcNode.mediaStream.getTracks().forEach(t=>t.stop());
-  if(audioCtx) audioCtx.close();
-  audioCtx=analyser=srcNode=null; prevMag=null; fluxHist=[]; lastOnset=0;
-}
-async function startWithTab(){
-  stopAudio();
-  const stream = await navigator.mediaDevices.getDisplayMedia({ video:{frameRate:1}, audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
-  initAudio(stream);
-}
-async function startWithMic(){
-  stopAudio();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
-  initAudio(stream);
-}
-function initAudio(stream){
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  srcNode  = audioCtx.createMediaStreamSource(stream);
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.5;
-  srcNode.connect(analyser);
-  processAudio();
-}
-function processAudio(){
-  const N = analyser.frequencyBinCount;
-  const f = new Float32Array(N); analyser.getFloatFrequencyData(f);
-  const mag = new Float32Array(N); for(let i=0;i<N;i++) mag[i] = Math.pow(10, f[i]/20);
-  if(!prevMag) prevMag = mag;
-  let flux=0; for(let i=0;i<N;i++){ const d=mag[i]-prevMag[i]; if(d>0) flux+=d; } prevMag=mag;
-  const W=43; fluxHist.push(flux); if(fluxHist.length>120) fluxHist.shift();
-  const M=Math.min(W,fluxHist.length);
-  const sens=parseFloat($('#sens').value);
-  let mean=0, sq=0; for(let i=fluxHist.length-M;i<fluxHist.length;i++) mean+=fluxHist[i]; mean/=M;
-  for(let i=fluxHist.length-M;i<fluxHist.length;i++){ const v=fluxHist[i]-mean; sq+=v*v; }
-  const std=Math.sqrt(sq/M), thresh=mean+sens*std;
-  const now=performance.now();
-  if(flux>thresh && (now-lastOnset)>120){ lastOnset=now; beat(); }
-  rafId=requestAnimationFrame(processAudio);
-}
-$('#tab').onclick = async ()=>{ try{ await startWithTab(); }catch(e){ alert('Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'); } };
-$('#mic').onclick = async ()=>{ try{ await startWithMic(); }catch(e){ alert('Microphone permission denied.'); } };
-
-/* ===== Canvas & sin(x) graph drawing ===== */
-const bg = $('#bg'), main = $('#main');
-const bctx = bg.getContext('2d'), ctx = main.getContext('2d');
-let W=0,H=0, hue=210; let t0=performance.now();
-function resize(){
-  const dpr=Math.max(1, window.devicePixelRatio||1);
-  [bg,main].forEach(c=>{ c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width='100%';c.style.height='100%'; c.getContext('2d').setTransform(dpr,0,0,dpr,0,0); });
-  W=innerWidth; H=innerHeight;
-}
-addEventListener('resize', resize); resize();
-
-function drawStars(){
-  bctx.clearRect(0,0,W,H);
-  for(let i=0;i<240;i++){
-    const x=(i*97)%W, y=(i*57)%H, z=(i%5)/5+0.2, r=(i%3)+0.5;
-    const a = (Math.sin(performance.now()*0.001 + i)*0.5+0.5)*0.7+0.1;
-    bctx.fillStyle=`hsla(${hue},100%,80%,${a*0.6})`;
-    bctx.beginPath(); bctx.arc(x,y,r*z,0,Math.PI*2); bctx.fill();
+  // ===== YouTube (optional) =====
+  let ytPlayer=null;
+  function parseVideoId(url){
+    try{const u=new URL(url);
+      if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+      if(u.searchParams.get('v')) return u.searchParams.get('v');
+      const m=url.match(/\\/embed\\/([a-zA-Z0-9_-]{6,})/); return m?m[1]:null;
+    }catch{ return null; }
   }
-}
+  window.onYouTubeIframeAPIReady = () => {
+    ytPlayer = new YT.Player('player', { videoId:'dQw4w9WgXcQ', playerVars:{playsinline:1,rel:0,modestbranding:1,controls:1} });
+  };
+  $('#load').onclick = ()=>{ const id=parseVideoId($('#yt').value.trim()); if(id) ytPlayer?.loadVideoById(id); };
 
-/* Graph state */
-let kick = 0; // energy from beats
-function graph(){
-  drawStars();
-  const now = performance.now();
-  const t = (now - t0)/1000;
-  kick *= 0.92; // decay
-
-  ctx.clearRect(0,0,W,H);
-  ctx.save();
-  ctx.translate(W/2, H/2);
-
-  // scales
-  const domain = parseFloat($('#domain').value); // total x-range ~[-domain,domain]
-  const scaleX = W/(domain*2);
-  const scaleY = H/4;
-  const amp = 1 + 0.6*kick;     // beat energy → amplitude
-  const phase = 0.9*kick;       // small phase shove on beat
-
-  // grid
-  ctx.strokeStyle = 'rgba(255,255,255,.08)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for(let gx=-domain; gx<=domain; gx+=1){
-    const X = gx*scaleX;
-    ctx.moveTo(X,-H); ctx.lineTo(X,H);
+  // ===== Audio capture + beat detection =====
+  let audioCtx, analyser, srcNode, rafId=null, prevMag=null, fluxHist=[], lastOnset=0, beatCount=0;
+  function stopAudio(){
+    if(rafId) cancelAnimationFrame(rafId), rafId=null;
+    if(srcNode?.mediaStream) srcNode.mediaStream.getTracks().forEach(t=>t.stop());
+    if(audioCtx) audioCtx.close();
+    audioCtx=analyser=srcNode=null; prevMag=null; fluxHist=[]; lastOnset=0;
   }
-  for(let gy=-4; gy<=4; gy+=1){
-    const Y = -gy*scaleY;
-    ctx.moveTo(-W,Y); ctx.lineTo(W,Y);
+  async function startWithTab(){
+    stopAudio();
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video:{frameRate:1}, audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
+    initAudio(stream);
   }
-  ctx.stroke();
-
-  // axes
-  ctx.strokeStyle = 'rgba(255,255,255,.25)';
-  ctx.beginPath();
-  ctx.moveTo(-W,0); ctx.lineTo(W,0);
-  ctx.moveTo(0,-H); ctx.lineTo(0,H);
-  ctx.stroke();
-
-  // sin(x) curve (graphics only)
-  const thick = parseFloat($('#thick').value);
-  ctx.lineWidth = thick;
-  ctx.strokeStyle = `hsl(${hue},100%,70%)`;
-  ctx.shadowColor = `hsla(${hue},100%,65%,.55)`;
-  ctx.shadowBlur = 14;
-
-  ctx.beginPath();
-  let first=true;
-  for(let px= -W/2; px<= W/2; px+=1){
-    const x = px/scaleX; // world x
-    const y = Math.sin(x + 0.5*t + phase); // animated + beat-pushed
-    const Y = - (y*amp) * scaleY * 0.6;
-    const X = px;
-    if(first){ ctx.moveTo(X,Y); first=false; } else { ctx.lineTo(X,Y); }
+  async function startWithMic(){
+    stopAudio();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
+    initAudio(stream);
   }
-  ctx.stroke();
+  function initAudio(stream){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    srcNode  = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.5;
+    srcNode.connect(analyser);
+    processAudio();
+  }
+  function processAudio(){
+    const N = analyser.frequencyBinCount;
+    const f = new Float32Array(N); analyser.getFloatFrequencyData(f);
+    const mag = new Float32Array(N); for(let i=0;i<N;i++) mag[i] = Math.pow(10, f[i]/20);
+    if(!prevMag) prevMag = mag;
+    let flux=0; for(let i=0;i<N;i++){ const d=mag[i]-prevMag[i]; if(d>0) flux+=d; } prevMag=mag;
 
-  ctx.restore();
-  requestAnimationFrame(graph);
-}
-graph();
+    const W=43; fluxHist.push(flux); if(fluxHist.length>120) fluxHist.shift();
+    const M=Math.min(W,fluxHist.length);
+    const sens=parseFloat($('#sens').value);
+    let mean=0, sq=0; for(let i=fluxHist.length-M;i<fluxHist.length;i++) mean+=fluxHist[i]; mean/=M;
+    for(let i=fluxHist.length-M;i<fluxHist.length;i++){ const v=fluxHist[i]-mean; sq+=v*v; }
+    const std=Math.sqrt(sq/M), thresh=mean+sens*std;
+    const now=performance.now();
+    if(flux>thresh && (now-lastOnset)>120){ lastOnset=now; beat(); }
+    rafId=requestAnimationFrame(processAudio);
+  }
+  $('#tab').onclick = async ()=>{ try{ await startWithTab(); }catch(e){ alert('Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'); } };
+  $('#mic').onclick = async ()=>{ try{ await startWithMic(); }catch(e){ alert('Microphone permission denied.'); } };
 
-/* beat effect */
-function beat(){
-  kick = Math.min(1, kick + 1);
-  hue = Math.floor(rand(0,360));
-  $('#hueVal').textContent = hue;
-  $('#beats').textContent = (++beatCount).toString();
-}
-document.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); beat(); } });
+  // ===== Canvas + sin(x) graph =====
+  const bg = $('#bg'), main = $('#main');
+  const bctx = bg.getContext('2d'), ctx = main.getContext('2d');
+  let W=0,H=0,hue=210,kick=0,t0=performance.now();
+  function resize(){
+    const dpr=Math.max(1, window.devicePixelRatio||1);
+    [bg,main].forEach(c=>{ c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width='100%'; c.style.height='100%'; c.getContext('2d').setTransform(dpr,0,0,dpr,0,0); });
+    W=innerWidth; H=innerHeight;
+  }
+  addEventListener('resize', resize); resize();
 
-/* start buttons */
-document.getElementById('tab').addEventListener('click', async ()=>{
-  try{ await startWithTab(); }catch(e){ alert('Tab audio blocked. On Chrome pick “Chrome Tab → This tab” and enable “Share tab audio”.'); }
-});
-document.getElementById('mic').addEventListener('click', async ()=>{
-  try{ await startWithMic(); }catch(e){ alert('Microphone permission denied.'); }
-});
-</script>
-<!-- YouTube IFrame API loader -->
-<script src="https://www.youtube.com/iframe_api"></script>
+  function stars(){
+    bctx.clearRect(0,0,W,H);
+    for(let i=0;i<240;i++){
+      const x=(i*97)%W, y=(i*57)%H, z=(i%5)/5+0.2, r=(i%3)+0.5;
+      const a=(Math.sin(performance.now()*0.001+i)*0.5+0.5)*0.7+0.1;
+      bctx.fillStyle=`hsla(${hue},100%,80%,${a*0.6})`;
+      bctx.beginPath(); bctx.arc(x,y,r*z,0,Math.PI*2); bctx.fill();
+    }
+  }
+
+  function draw(){
+    stars();
+    const now=performance.now(), t=(now-t0)/1000;
+    kick *= 0.92;
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(W/2,H/2);
+
+    const domain=parseFloat($('#domain').value);
+    const scaleX=W/(domain*2);
+    const scaleY=H/4;
+    const amp=1+0.6*kick;
+    const phase=0.9*kick;
+
+    // grid
+    ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1; ctx.beginPath();
+    for(let gx=-domain; gx<=domain; gx+=1){ const X=gx*scaleX; ctx.moveTo(X,-H); ctx.lineTo(X,H); }
+    for(let gy=-4; gy<=4; gy+=1){ const Y=-gy*scaleY; ctx.moveTo(-W,Y); ctx.lineTo(W,Y); }
+    ctx.stroke();
+
+    // axes
+    ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.beginPath();
+    ctx.moveTo(-W,0); ctx.lineTo(W,0); ctx.moveTo(0,-H); ctx.lineTo(0,H); ctx.stroke();
+
+    const thick=parseFloat($('#thick').value);
+    ctx.lineWidth=thick; ctx.strokeStyle=`hsl(${hue},100%,70%)`; ctx.shadowColor=`hsla(${hue},100%,65%,.55)`; ctx.shadowBlur=14;
+
+    ctx.beginPath(); let first=true;
+    for(let px=-W/2; px<=W/2; px+=1){
+      const x=px/scaleX;
+      const y=Math.sin(x + 0.5*t + phase);
+      const Y=-(y*amp)*scaleY*0.6;
+      const X=px;
+      if(first){ ctx.moveTo(X,Y); first=false; } else { ctx.lineTo(X,Y); }
+    }
+    ctx.stroke();
+
+    ctx.restore();
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  function beat(){
+    kick=Math.min(1,kick+1);
+    hue=Math.floor(rand(0,360));
+    $('#hueVal').textContent=hue;
+    $('#beats').textContent=(++beatCount).toString();
+  }
+  document.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); beat(); } });
+  </script>
 </body>
 </html>
+"""
+p = Path("/mnt/data/index_graph_dancer_v3.html")
+p.write_text(v3, encoding="utf-8")
+str(p)
