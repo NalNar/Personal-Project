@@ -1,8 +1,9 @@
 # Dancing Equations
 
-A simple web page that displays animated math equations that "dance" while a YouTube video plays in the background.
+A standalone web page that displays an audio-reactive sin(x) graph that "dances" in sync with music while a YouTube video plays in the corner.
 
 ## Usage
-1. Open `index.html` in a browser.
-2. Enter a YouTube URL or video ID and press **Play**.
-3. Watch the equations move across an intergalactic-styled background.
+1. Open `index.html` in a modern browser.
+2. Optionally enter a YouTube URL or video ID and press **Load**.
+3. Press **Start Tab Audio** to make the graph respond to the video's sound or **Use Microphone** for external audio.
+4. Watch the graph pulse to the beat. Press the spacebar for manual beats.
