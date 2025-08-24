@@ -98,6 +98,7 @@ Zip the **contents** of the project folder (not the folder itself):
 cd unipath-youtube
 zip -r ../unipath-youtube-v0.5.0.zip .
 
+### Attribution 
 Ideation & curriculum design: Authored by me.
 
 Implementation: Code and scaffolding were generated with assistance from ChatGPT (GPT-5 Thinking); large portions are AI-generated. Review and test before production use.
