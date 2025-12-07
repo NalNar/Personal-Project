@@ -15,6 +15,7 @@ public class BirthdayParadox {
      * @param groupSize The number of people in the group.
      * @param trials    The number of simulation trials to run.
      * @return The estimated probability of a shared birthday.
+     * @NalNar
      */
     public static double simulateBirthdayParadox(int groupSize, int trials) {
         int collisions = 0;
