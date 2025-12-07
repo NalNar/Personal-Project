@@ -1,5 +1,7 @@
 /** 
  * Implementing the greatest common divisor algorithm by euclid 
+ * idea behind the algorithm is based on the fact that
+ * gcd(x,y) = gcd(y, x mod y), came from discrete math book edward s. 
 */
 public class EuclidAlgoGCD {
     
