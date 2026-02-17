@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Name — Portfolio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav container">
+      <a class="brand" href="#hero">Your Name</a>
+      <button id="navToggle" class="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#about">About</a></li>
+        <li><a href="#skills">Skills</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌓</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="hero">
+      <div class="hero-inner container">
+        <img src="assets/avatar.svg" alt="avatar" class="avatar">
+        <h1>Your Name</h1>
+        <p class="tagline">Software engineer • Builder of useful things • Open-source contributor</p>
+        <p class="cta-row"><a class="btn primary" href="#contact">Work with me</a> <a class="btn ghost" href="#projects">See projects</a></p>
+      </div>
+    </section>
+
+    <section id="about" class="container about">
+      <h2>About</h2>
+      <p>I design and build web and backend systems. I enjoy clean architecture, testable code, and mentoring teammates. Replace this paragraph with a concise summary of who you are, your focus areas, and what kind of roles or projects you seek.</p>
+    </section>
+
+    <section id="skills" class="container skills">
+      <h2>Skills</h2>
+      <div class="skill-grid">
+        <div class="skill">Java</div>
+        <div class="skill">Spring Boot</div>
+        <div class="skill">JavaScript</div>
+        <div class="skill">React</div>
+        <div class="skill">REST APIs</div>
+        <div class="skill">SQL &amp; NoSQL</div>
+      </div>
+    </section>
+
+    <section id="projects" class="container projects">
+      <h2>Selected Projects</h2>
+      <div class="projects-grid">
+        <article class="project">
+          <h3>Spring-Boot Demo</h3>
+          <p>Demo store app showcasing controllers, services, and dependency injection. See source in the repo.</p>
+          <p><a href="../../Spring-Boot-Demo/demo/" class="link">Open project folder</a></p>
+        </article>
+
+        <article class="project">
+          <h3>Basic Blockchain</h3>
+          <p>Simple blockchain implementation and utilities — educational project.</p>
+          <p><a href="../../BasicBlockchain/" class="link">Open project folder</a></p>
+        </article>
+
+        <article class="project">
+          <h3>Algorithms &amp; Utilities</h3>
+          <p>Collection of algorithm exercises and utilities (arrays, math, data structures).</p>
+          <p><a href="../../Arrays/" class="link">Open project folder</a></p>
+        </article>
+      </div>
+    </section>
+
+    <section id="contact" class="container contact">
+      <h2>Contact</h2>
+      <p>Interested in hiring or collaborating? Send a quick message.</p>
+      <form id="contactForm">
+        <label>Name<br><input type="text" name="name" required></label>
+        <label>Email<br><input type="email" name="email" required></label>
+        <label>Message<br><textarea name="message" rows="5" required></textarea></label>
+        <p><button class="btn primary" type="submit">Send</button></p>
+      </form>
+      <p class="muted">Or email me at <a href="mailto:you@example.com">you@example.com</a></p>
+    </section>
+  </main>
+
+  <footer class="site-footer container">
+    <small>© Your Name — Built with ❤️ — <a href="#hero">Top</a></small>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
