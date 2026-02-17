@@ -7,22 +7,26 @@
     <meta name = "viewport" content = "width=device-width", initial-scale = "1.0">
     <title> Random Secure Password Generator </title>
     <link rel = "stylesheet" href = "style.css">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+AT:ital,wght@0,100..400;1,100..400&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double:wght@100..900&family=Playwrite+AT:ital,wght@0,100..400;1,100..400&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <div class = "container">
 
-        <h1> Generate A <br><span>Secure Password </br></span></h1>
+        <h1> Generate a <em> Random </em> <br><span>Secure Password </br></span></h1>
     <div class = "display"> 
         <input type = "text" id="password" placeholder="Password">
-        <img src = "https://staging.svgrepo.com/show/50340/password.svg" alt = "photo of lock", width = "50" height = auto >
     </div>
-    <button> Generate </button>
+    <button onclick=createPassword()> Generate </button>
     
 </div>
 </body>
 
-
+<script src="password-gen.js"></script>
 
 </html>
