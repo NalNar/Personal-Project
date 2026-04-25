@@ -69,11 +69,13 @@ function rankSources(question) {
     const li = document.createElement('li');
     const confidence = score >= 2 ? 'High match' : score === 1 ? 'Medium match' : 'Low match';
     li.innerHTML = `<strong>${source.title}</strong> · ${confidence}<br>${source.summary} · <a href="${source.link}" target="_blank" rel="noopener noreferrer">source</a>`;
+    li.innerHTML = `<strong>${source.title}</strong> (match: ${score})<br>${source.summary} · <a href="${source.link}" target="_blank" rel="noopener noreferrer">source</a>`;
     sourceList.appendChild(li);
   });
 }
 
 function stepsForTopic(question) {
+function generateStepByStep(question) {
   const lower = question.toLowerCase();
 
   if (lower.includes('derivative') || lower.includes('differentiate')) {
@@ -162,6 +164,8 @@ chatForm.addEventListener('submit', (event) => {
   addMessage(question, 'user');
   const guidance = buildGuidance(question);
   addMessage(guidance, 'bot');
+  const steps = generateStepByStep(question);
+  addMessage(`Here is a step-by-step approach:\n${steps}`, 'bot');
 
   rankSources(question);
 
@@ -178,4 +182,5 @@ promptChips.forEach((chip) => {
 addMessage(
   'Hi! I am your study assistant.\nUpload a file, then ask your question.\nI will break it into a friendly step-by-step plan.'
 );
+addMessage('Hi! I am your study assistant. Share your question and I will guide you step-by-step.');
 rankSources('equation');

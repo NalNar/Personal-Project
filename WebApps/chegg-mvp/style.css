@@ -8,6 +8,13 @@
   --success: #1b9c67;
   --border: #f2d5b8;
   --primary-soft: #fff0e2;
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --text: #1b1f2a;
+  --muted: #5f6b7a;
+  --primary: #0357ff;
+  --success: #1b9c67;
+  --border: #dce4f3;
 }
 
 * {
@@ -23,6 +30,7 @@ body {
 
 header {
   background: linear-gradient(135deg, #c25700, #eb7100);
+  background: linear-gradient(135deg, #0a3dcf, #0b84ff);
   color: white;
   padding: 1.75rem;
   text-align: center;
@@ -58,6 +66,7 @@ main {
   width: 100%;
   height: 16px;
   background: #ffe3c8;
+  background: #eef3ff;
   border-radius: 999px;
   overflow: hidden;
   margin-top: 0.6rem;
@@ -67,6 +76,7 @@ main {
   width: 0%;
   height: 100%;
   background: linear-gradient(90deg, #ff9a3c, #eb7100);
+  background: linear-gradient(90deg, #1ec9a2, #1b9c67);
   transition: width 0.25s ease;
 }
 
@@ -101,6 +111,7 @@ main {
   overflow-y: auto;
   padding: 0.75rem;
   background: #fffaf5;
+  background: #fbfdff;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -118,11 +129,13 @@ main {
 .user {
   align-self: flex-end;
   background: #ffe4cb;
+  background: #dce8ff;
 }
 
 .bot {
   align-self: flex-start;
   background: #fff3e6;
+  background: #eaf9f3;
 }
 
 form {
