@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chegg Student Portal MVP</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Chegg Student Portal (MVP)</h1>
+      <p>Upload a problem, get step-by-step guidance, and track your learning progress.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>1) Upload Document</h2>
+        <input id="fileInput" type="file" accept=".txt,.pdf,.doc,.docx,.png,.jpg,.jpeg" />
+        <p id="fileStatus" class="muted">No file uploaded yet.</p>
+      </section>
+
+      <section class="card">
+        <h2>2) Student Progress</h2>
+        <label for="progressRange">How far are you in solving this problem?</label>
+        <input id="progressRange" type="range" min="0" max="100" value="0" />
+        <div class="progress-wrap">
+          <div id="progressBar"></div>
+        </div>
+        <p id="progressLabel">Progress: 0%</p>
+      </section>
+
+      <section class="card chat-card">
+        <h2>3) AI Study Chat</h2>
+        <div id="chatWindow" aria-live="polite"></div>
+        <form id="chatForm">
+          <input
+            id="chatInput"
+            type="text"
+            placeholder="Ask: How do I solve this step-by-step?"
+            required
+          />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>4) Similar Previous Chegg-style Solutions</h2>
+        <p class="muted">The list below is generated from a small local sample set for MVP demo purposes.</p>
+        <ul id="sourceList"></ul>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
