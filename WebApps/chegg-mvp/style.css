@@ -74,6 +74,26 @@ main {
   grid-column: span 2;
 }
 
+.quick-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.prompt-chip {
+  border: 1px solid var(--border);
+  background: var(--primary-soft);
+  color: #8a4300;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.prompt-chip:hover {
+  background: #ffe3c6;
+}
+
 #chatWindow {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -92,6 +112,7 @@ main {
   border-radius: 10px;
   max-width: 82%;
   line-height: 1.35;
+  white-space: pre-wrap;
 }
 
 .user {

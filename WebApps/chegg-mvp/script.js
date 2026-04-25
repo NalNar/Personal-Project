@@ -7,6 +7,7 @@ const chatWindow = document.getElementById('chatWindow');
 const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 const sourceList = document.getElementById('sourceList');
+const promptChips = document.querySelectorAll('.prompt-chip');
 
 const cheggLikeSources = [
   {
@@ -66,12 +67,13 @@ function rankSources(question) {
 
   scored.forEach(({ source, score }) => {
     const li = document.createElement('li');
-    li.innerHTML = `<strong>${source.title}</strong> (match: ${score})<br>${source.summary} · <a href="${source.link}" target="_blank" rel="noopener noreferrer">source</a>`;
+    const confidence = score >= 2 ? 'High match' : score === 1 ? 'Medium match' : 'Low match';
+    li.innerHTML = `<strong>${source.title}</strong> · ${confidence}<br>${source.summary} · <a href="${source.link}" target="_blank" rel="noopener noreferrer">source</a>`;
     sourceList.appendChild(li);
   });
 }
 
-function generateStepByStep(question) {
+function stepsForTopic(question) {
   const lower = question.toLowerCase();
 
   if (lower.includes('derivative') || lower.includes('differentiate')) {
@@ -111,6 +113,27 @@ function generateStepByStep(question) {
   ].join('\n');
 }
 
+function buildGuidance(question) {
+  const steps = stepsForTopic(question).split('\n').map((line) => `• ${line.replace(/^Step \d+:\s*/, '')}`);
+  return [
+    'Great question — let’s make this manageable.',
+    '',
+    '1) Understand the target',
+    '• Identify exactly what the question asks you to find.',
+    '',
+    '2) Plan your approach',
+    '• Pick the formula/rule that best fits the problem type.',
+    '',
+    '3) Work the problem in clear mini-steps',
+    ...steps,
+    '',
+    '4) Final check',
+    '• Re-check units/signs and substitute your answer back when possible.',
+    '',
+    'If you paste the exact problem statement, I can tailor these steps line-by-line.'
+  ].join('\n');
+}
+
 fileInput.addEventListener('change', () => {
   const file = fileInput.files[0];
   if (!file) {
@@ -137,13 +160,22 @@ chatForm.addEventListener('submit', (event) => {
   }
 
   addMessage(question, 'user');
-  const steps = generateStepByStep(question);
-  addMessage(`Here is a step-by-step approach:\n${steps}`, 'bot');
+  const guidance = buildGuidance(question);
+  addMessage(guidance, 'bot');
 
   rankSources(question);
 
   chatInput.value = '';
 });
 
-addMessage('Hi! I am your study assistant. Share your question and I will guide you step-by-step.');
+promptChips.forEach((chip) => {
+  chip.addEventListener('click', () => {
+    chatInput.value = chip.dataset.prompt;
+    chatInput.focus();
+  });
+});
+
+addMessage(
+  'Hi! I am your study assistant.\nUpload a file, then ask your question.\nI will break it into a friendly step-by-step plan.'
+);
 rankSources('equation');
