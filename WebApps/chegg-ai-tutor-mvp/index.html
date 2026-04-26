@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chegg AI Tutor MVP</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand-wrap">
+          <h1><span class="brand">Chegg</span> AI Tutor</h1>
+        </div>
+
+        <nav class="nav-links">
+          <a class="active" href="#">💬 New Chat</a>
+          <a href="#">🏠 Home</a>
+          <a href="#">🧾 My Problems</a>
+          <a href="#">📚 Subjects</a>
+          <a href="#">📄 Solutions</a>
+          <a href="#">🔖 Bookmarks</a>
+          <a href="#">🕘 History</a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <a href="#">⚙️ Settings</a>
+          <a href="#">❓ Help & Support</a>
+          <div class="pro-card">
+            <p class="pro-title">AI Tutor Pro</p>
+            <p>Unlimited help, step-by-step</p>
+            <button>Upgrade</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar card">
+          <div class="crumbs">Algebra <span>›</span> Linear Equations</div>
+          <div class="topbar-actions">
+            <label class="upload-btn" for="docUpload">🖼️ Upload Image</label>
+            <input id="docUpload" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt" />
+            <button class="avatar">A</button>
+          </div>
+        </header>
+
+        <section class="grid">
+          <section class="left">
+            <div class="card ask-box">
+              <p class="label">You asked</p>
+              <p id="questionText">Solve for x: 2x + 5 = 17</p>
+            </div>
+
+            <div class="card">
+              <h2>AI Tutor</h2>
+              <p class="subtitle">Let's solve this step by step.</p>
+              <ol id="stepsList" class="steps"></ol>
+            </div>
+
+            <div class="card progress-card">
+              <div class="row between">
+                <h3>Student Progress</h3>
+                <strong id="progressLabel">0%</strong>
+              </div>
+              <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+              <p class="tiny">Click each step once you understand it.</p>
+            </div>
+
+            <div class="chips card">
+              <button type="button">✨ Explain another way</button>
+              <button type="button">✏️ Practice similar problem</button>
+              <button type="button">📈 Show graph</button>
+            </div>
+
+            <form id="promptForm" class="prompt card">
+              <input id="promptInput" type="text" placeholder="Ask a follow-up... e.g. Solve for y: 3y - 9 = 12" required />
+              <button type="submit">Send</button>
+            </form>
+            <p class="tiny info">AI Tutor can make mistakes. Check important info.</p>
+          </section>
+
+          <aside class="right">
+            <div class="card">
+              <h3>From Chegg Solutions</h3>
+              <p class="verified">✅ Verified solution from Chegg experts</p>
+              <p id="sourceSolution"></p>
+              <a href="#">View full solution</a>
+            </div>
+
+            <div class="card">
+              <div class="row between"><h3>Similar solved problems</h3><a href="#">See all</a></div>
+              <ul id="similarProblems" class="similar"></ul>
+            </div>
+
+            <div class="card">
+              <h3>Key concepts</h3>
+              <div id="concepts" class="tags"></div>
+            </div>
+
+            <div class="card">
+              <h3>Uploaded Document</h3>
+              <p id="uploadedDocName" class="tiny">No document uploaded yet.</p>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
